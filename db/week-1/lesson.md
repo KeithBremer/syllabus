@@ -87,7 +87,7 @@ As mentioned previously, a relational database is a specific type of database. D
 
 ### Check your PostgreSQL installation
 
-Open a terminal in your laptop and verify the command `psql -V` returns the version of PostgreSQL. In psql, you can type use the command `help` to show the help menu. Within the command prompt, you can enter SQL statements and run them against PostgreSQL. To quit psql, enter the command `\q`.
+Open a terminal in your laptop and verify the command `psql -V` returns the version of PostgreSQL. In psql, you can use the command `help` to show the help menu. Within the command prompt, you can enter SQL statements and run them against PostgreSQL. To quit psql, enter the command `\q`.
 
 ## Communicating with the database using SQL
 
@@ -195,6 +195,8 @@ Display a summary of the psql (backslash) commands:
 Exit (quit) from psql:
 
     \q
+
+Note that `psql` commands ARE case sensitive, unlike SQL commands.
 
 ---
 ## Exercise 2
@@ -407,6 +409,8 @@ Assuming room rates include VAT at 20%, list room rates after VAT increases to 2
            round(rate * 100/120 * 123.5/100) AS new_rate
        FROM rooms;
 
+*For further information on SQL functions see the official PostgreSQL documentation at https://www.postgresql.org/docs/12/functions.html (for version 12 - for other versions change 12 to the required version)*
+
 ---
 ### Date and Time in SQL
 In SQL dates and times are held in an internal format but are represented externally (when entering values and displaying them) as strings;
@@ -423,7 +427,7 @@ You can perform arithmetic on dates and times, for example:
 
 This query performs subtraction of one date from another (`checkout_date - checkin_date`) to calculate the number of nights the customer has stayed. It also performs addition (`current_date + 1`) to get tomorrow's date so that it lists all reservations that will be checking out tomorrow.
 
-Note: current_date is a postgres function that returns the current date.
+Note: `current_date` is a postgres function that returns the current date.
 
 Also note that there are many ways to get the same result - you may explore those for yourself.
 
