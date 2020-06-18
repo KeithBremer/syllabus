@@ -23,7 +23,7 @@ Read the Mentors Notes [here](./mentors.md)
   - Use basic single table query commands in SQL
   - Choose which values are returned by a query
   - Use literals, expressions and functions in queries
-  - Restrict the rows returned by a query to match some condition
+  - Restricting the rows returned by a query to match some condition
   - Sorting and limiting the number of rows returned
 - [Homework](#homework)
 
@@ -35,7 +35,7 @@ By the end of this lesson students should be able to
 
 - Explain why databases are needed in Web Development
 - Define what SQL is and what it is used for
-- Describe what `table`, `rows` and `columns` are used for in a relational database
+- Describe what `tables`, `rows` and `columns` are used for in a relational database
 - Retrieve data from a table using PostgreSQL
 - Use expressions to manipulate the results of queries
 - Retrieve data from a table using conditionals in PostgreSQL
@@ -85,22 +85,13 @@ As mentioned previously, a relational database is a specific type of database. D
   <img src="table-diagram.png" display="block" width="60%"/>
 </p>
 
-**How about storing everything in one big table as shown below? Why isn't it a good idea?**
-
-A customer could have several bookings. If the customer changes their telephone number, you would have to update every single row for this customer with their new number, which is more prone to errors. As a general rule, try to avoid duplication of data, and instead design your system in a way that you have a single source of truth for each piece of data. The example below is **NOT** a good solution.
-
-<!-- ![combined-diagram](combined-diagram.png) -->
-<p align="center">
-  <img src="combined-diagram.png" display="block" width="60%"/>
-</p>
-
 ### Check your PostgreSQL installation
 
 Open a terminal in your laptop and verify the command `psql -V` returns the version of PostgreSQL. In psql, you can type use the command `help` to show the help menu. Within the command prompt, you can enter SQL statements and run them against PostgreSQL. To quit psql, enter the command `\q`.
 
 ## Communicating with the database using SQL
 
-All commands in the following need to be entered in a psql command prompt. However, sometimes it's easier to write the code in a file and then load the file with psql. For example, if you write your SQL code in a file called `test.sql`, you can then execute it with `psql -d DATABASE_NAME -f test.sql`.
+All commands in the following need to be entered at the `psql` command prompt. However, sometimes it's easier to write the code in a file and then load the file with psql. For example, if you write your SQL code in a file called `test.sql`, you can then execute it with `psql -d DATABASE_NAME -f test.sql`.
 
 ### Creating a new database
 
@@ -116,20 +107,11 @@ Then connect to your database with:
     psql cyf_hotels
 ```
 
-Download the following files to a directory on your computer. To do this, click each file in turn to open it in a github formatted page, then right click the Raw button in the bar just above the code and select Save As (or Save Link As or similar) to save it:
+Download the following files to a directory on your computer. To do this, click the file to open it in a github formatted page, then right click the Raw button in the bar just above the code and select Save As (or Save Link As or similar) to save it:
 
 - [`build-hotel.sql`](./sql/build-hotel.sql)
-- [`build-hotel.sql`](./sql/build-hotel.sql)
-- [`customers.sql`](./sql/customers.sql)
-- [`fixup-dates.sql`](./sql/fixup-dates.sql)
-- [`invoices.sql`](./sql/invoices.sql)
-- [`reservations.sql`](./sql/reservations.sql)
-- [`rooms.sql`](./sql/rooms.sql)
-- [`room_types.sql`](./sql/room_types.sql)
 
-Click the Back (<) button to return to this page for each file.
-
-Once you have all the files downloaded to the same directory, execute the file `build-hotel.sql` from `psql`. This will create the sample data you can use for the following sections as shown below (replace `/your/sql/path/` with the path to the download directory used above). Only execute the one file - it runs each of the others in the correct order.
+Once you have the file downloaded to a known directory, execute the file `build-hotel.sql` from `psql`. This will create the sample data you can use for the following sections as shown below (replace `/your/sql/path/` with the path to the download directory used above).
 
 ```SQL
 \include /your/sql/path/build-hotel.sql
