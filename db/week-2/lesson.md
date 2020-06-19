@@ -12,11 +12,10 @@ Read the Mentors Notes [here](./mentors.md)
 
 - Revision from last week
 - [More SQL](#more-sql)
-  - Changing the definition of a table
-  - Dropping a table
+  - Using aggregate functions in a query
   - Updating a row
   - Deleting a row
-  - Join tables
+  - Joining tables
   - Other useful operations
 - [Integration with NodeJS](#integration-with-nodejs)
   - Introduction to node-postgres
@@ -27,86 +26,199 @@ Read the Mentors Notes [here](./mentors.md)
 
 ## Learning Objectives
 
-- Add and remove columns in a pre-existing table using PostgreSQL using `ALTER`
-- Rename tables and columns in a pre-existing table using PostgreSQL using `DELETE`
+- Aggregate data over multiple rows and use aggregate values to restrict the results
 - Update rows in a pre-existing table using PostgreSQL using `UPDATE`
-- Combine tables together using PostgreSQL using `INNER JOIN`
+- Delete unwanted rows from an existing table using `DELETE`
+- Combine tables together in PostgreSQL using `INNER JOIN`
 - Connect a PostgreSQL database to a NodeJS application
 - Retrieve data from a PostgreSQL database in a NodeJS application
 
 ---
 
-## More SQL
+### Using Aggregate Functions
 
-For the following, use the file [`cyf_hotels_exercise5.sql`](../week-1/cyf_hotels_exercise5.sql) from the previous class to reinitialise your database with `psql -d cyf_hotels -f cyf_hotels_exercise5.sql`.
+How to calculate totals, averages, etc. over multiple rows.
 
-### Changing the definition of a table
-
-Sometimes, you may need to change the definition of a table you created before without deleting it. Such changes include renaming a table, adding/removing a column, changing the name of a column, changing the type of a column etc... The general syntax to perform these operations is:
+You frequently need to get a single piece of information that is derived from multiple rows in a table. For example, when you need to know the total i
 
 ```sql
-ALTER TABLE table_name action;
+    SELECT sum(total)
+       FROM invoices
+       WHERE invoice_date BETWEEN
+             '2018-08-01' AND '2018-08-31';
 ```
 
-For example, to add a new column to the existing `customers` table:
+The aggregate functions are:
+*   sum :   Calculate the total of the values in a column
+*   avg :   Calculate the average (mean) of the values in a column
+*   min :   Determine the mimimum value of a column
+*   max :   Determine the maximum value of a column
+*   count : Count the number of values (non-null) in a column
+
+All the above are in the SQL standard, most implementations provide others. SUM and AVG can only apply to numeric data, the others can apply to any datatype.
+
+Further examples:
+
+"What is the average length of stay at our hotel?" :
 
 ```sql
-ALTER TABLE customers ADD COLUMN date_of_birth DATE;
+    SELECT avg(checkout_date - checkin_date)
+       FROM reservations;
 ```
 
-To delete an existing column from the `customers` table:
+"What are the lowest and highest room rates we charge?" :
 
 ```sql
-ALTER TABLE customers DROP COLUMN date_of_birth;
+    SELECT min(rate) AS lowest,
+           max(rate) AS highest
+       FROM rooms;
 ```
 
-To rename the table `customers` into `clients`:
+You can use the count(x) function to count non-null values:
 
 ```sql
-ALTER TABLE customers RENAME TO clients;
+    SELECT count(id) AS id_ct, count(postcode) AS post_ct
+        FROM customers;
+     id_ct | post_ct
+    -------+---------
+       133 |     126
+    (1 row)
 ```
 
-For more examples, you can consult the following tutorial: [Postgres alter table](http://www.postgresqltutorial.com/postgresql-alter-table/).
+Notice that these two results show different values - there are NULL values for postcode but id is mandatory for all rows.
 
-#### Exercise 1
-
-- Add a column `date_of_birth` of type `DATE` in the `customers` table.
-- Rename the column `date_of_birth` to `birthdate` in the `customers` table.
-- Delete the column `birthdate` from the `customers` table
-
-### Dropping a table
-
-To delete the table `customers`:
+If you just want to count the number of rows, use `count(*)`:
 
 ```sql
-DROP TABLE customers;
+    SELECT count(*) FROM customers;
 ```
 
-#### Exercise 2:
+### Grouping Rows for Aggregation
+You can calculate aggregates over subsets of rows using the GROUP BY clause:
 
-- Create a new table `test`
-- Drop the table `test`
+```sql
+    SELECT count(*) FROM rooms
+       GROUP BY room_type;
+     count
+    -------
+        14
+        14
+        8
+        10
+        2
+    (5 rows)
+```
+
+What do you notice?
+
+The query calculated the counts correctly but we have no idea which room type each value represents. To solve this we are allowed to include the GROUP BY expressions in the list of selected values, as below:
+
+```sql
+    SELECT room_type, count(*) FROM rooms
+       GROUP BY room_type;
+     room_type    | count
+    --------------+-------
+     PREMIUM      |    14
+     PREMIER      |    14
+     PREMIER PLUS |     8
+     PREMIUM PLUS |    10
+     FAMILY       |     2
+    (5 rows)
+```
+
+Notice the `room_type` used for GROUP BY is also included in the SELECT list of values.
+
+We can group by multiple expressions, for example:
+
+```sql
+    SELECT trunc(room_no/100) AS floor,
+        to_char(checkin_date, 'YYYY-MM') AS month,
+        count(*), sum(no_guests), avg(no_guests)
+    FROM reservations
+    GROUP BY floor, month;
+```
+
+Notice that the GROUP BY is using the column aliases `floor` and `month` that have been defined in the select list. This works in many, but not all, SQL implementations. (In those that don't allow aliases you must use the full expression, for example: `trunc(room_no/100)` instead of `floor`)
+
+You can use a WHERE clause to restrict the rows that are included in the aggregate function. For example, if we need the above query for only the 2nd and 3rd floors:
+
+```sql
+    SELECT trunc(room_no/100) AS floor,
+           to_char(checkin_date, 'YYYY-MM') AS month,
+           count(*), sum(no_guests), avg(no_guests)
+       FROM reservations
+       WHERE room_no BETWEEN 200 AND 399
+       GROUP BY floor, month;
+```
+
+Note that it is NOT usually possible to use column aliases in the where condition.
+
+A WHERE clause is applied before any aggregation, if you need to restrict results using an aggregate function you can't do that using the WHERE clause.
+
+In the above, to return only results with the number of reservations greater than, say, 4 we use the HAVING clause:
+
+```sql
+    SELECT trunc(room_no/100) AS floor,
+           to_char(checkin_date, 'YYYY-MM') AS month,
+           count(*), sum(no_guests), avg(no_guests)
+       FROM reservations
+       GROUP BY floor, month
+       HAVING count(*) > 4;    --<< Note the HAVING keyword
+```
+
+The order of clauses in the SELECT statement is:
+
+```sql
+    SELECT ...
+       FROM ...
+       [WHERE ...]
+       [GROUP BY ...
+       [HAVING ...] ]
+       [ORDER BY ...]
+```
+
+The square brackets indicate optional clauses. Note that HAVING is only relevant when you have a GROUP BY and must follow it in the SELECT statement.
+
+It can be confusing at first knowing whether to use a WHERE clause or a HAVING clause with GROUP BY.
+
+Use the WHERE clause when values you want to test are available without having to use any aggregate functions (e.g. plain column values).
+
+Use HAVING when the values you want to test are the results of aggregate functions (e.g. `count(*)`, `sum(amount)`, `min(x)`, etc...).
+
+---
+### Exercise
+1.  Get the numbers of rows in each of the tables: rooms, room_types, customers and reservations.
+2.  How many reservations do we have for next month?
+3.  Which rooms have been occupied for less than 10 nights and for how many nights have they been occupied?
+4.  How many invoices are still unpaid from over a month ago and what is the total owed?
+---
 
 ### Updating a row
 
 The general construction to update a row is:
 
 ```sql
-UPDATE table SET column1 = value1, column2 = value2 WHERE condition;
+UPDATE table
+  SET column1 = value1,
+      column2 = value2
+  WHERE condition;
 ```
 
-For example, to update the name and country of the customers with ID 3:
+For example, to update the name and country of the customer with ID 3:
 
 ```sql
-UPDATE customers SET name='Bob Marley', country='Jamaica' WHERE id=3;
+UPDATE customers
+  SET name='Bob Marley',
+      country='Jamaica'
+  WHERE id=3;
 ```
 
 #### Exercise 3
 
-- Update the postcode of the hotel named `Elder Lake Hotel` to `L10XYZ`
-- Update the number of rooms of `Cozy Hotel` to `25`
-- For the customer named `Nadia Sethuraman`, update her address to `2 Blue Street`, her city to `Glasgow` and her postcode to `G11ABC` in one query
-- Update all the bookings of customer with ID `1` for the hotel with ID `1` to `5` nights in one query
+- Update the postcode of the customer named `Alice Evans` to `M21 8UP`
+- Update room 107 to allow up to 3 guests
+- For the customer named `Nadia Sethuraman`, update her address to `2 Blue Street`, her city to `Glasgow` and her postcode to `G12 1AB` in one query
+- Update all the future bookings of customer with ID 96 to 3 nights (starting on the same check-in date) in one query
 
 ### Deleting a row
 
@@ -127,95 +239,152 @@ DELETE FROM bookings WHERE id=4;
 #### Exercise 4
 
 - Delete the booking of customer ID `8` for the date `2020-01-03`
-- Delete all the bookings of customer ID `6`
-- Delete the customer with ID `6`
+- Delete all the bookings of customer Juri Yoshido (hint: subquery)
+- Delete the customer details for Juri Yoshido
 
 ### Joining tables
 
-Sometimes, you will need to retrieve data which are spread in different tables in a single response. For this purpose, you will need to join tables together. The general syntax is:
+So far we've only looked at one table in any query. Many problems require data from several tables - how do we do that?
+
+For example, if I want to phone or email customers who have not yet paid their invoices, which tables do I need to look at?
+
+Use joins to combine data from more than one table. Joins use column values to match rows in one table to rows in another.
+
+The join columns are usually referred to as foreign keys and primary keys.
+
+![Join Diagram](join-diagram.png)
+
+To join reservations and invoices in SQL:
 
 ```sql
-SELECT A.column1, B.column2 FROM A INNER JOIN B ON A.b_id=B.id;
+    SELECT r.cust_id, r.room_no, i.invoice_date, i.total
+       FROM reservations r JOIN
+            invoices i ON (r.id = i.res_id);
 ```
 
-For example, to load all the bookings along with customer data:
+Notice:
+
+The new keyword JOIN with ON (predicate)
+
+Table aliases (r and i) used to qualify columns
+
+The new syntax follows the following pattern:
 
 ```sql
-SELECT * FROM customers INNER JOIN bookings ON customers.id=bookings.customer_id;
+    SELECT ...
+      FROM ... [JOIN ... ON (...)]...
+      [WHERE ...]
+      [GROUP BY ... [HAVING ...] ]
+      [ORDER BY ...]
 ```
 
-To load all the bookings along with customer data and hotel data:
+Use the JOIN to define the combined row source then you can use WHERE, DISTINCT, GROUP BY, ORDER BY, etc... as with single-table queries. For example:
 
 ```sql
-SELECT * FROM bookings
-INNER JOIN customers ON customers.id=bookings.customer_id
-INNER JOIN hotels ON hotels.id=bookings.hotel_id;
+    SELECT r.cust_id, r.room_no, i.invoice_date, i.total
+      FROM reservations r JOIN
+           invoices i ON (i.res_id = r.id)
+      WHERE r.checkin_date > '2018-07-01'
+        AND i.total < 500
+      ORDER BY i.invoice_date DESC, r.cust_id;
 ```
 
-To load the booking checkin dates for customer ID `1` along with the customer name and the hotel name:
+There is no theoretical limit to the number of tables that can be joined in a query, although practical considerations like complexity and performance must be considered. It is quite common, though, to find up to seven or eight tables joined in a query.
+
+Mult-table joins just extend the syntax to add more tables, as below:
 
 ```sql
-SELECT bookings.checkin_date,customers.name,hotels.name FROM bookings
-INNER JOIN customers ON customers.id=bookings.customer_id
-INNER JOIN hotels ON hotels.id=bookings.hotel_id
-WHERE customers.id=1;
+    SELECT c.name, c.phone, c.email, i.invoice_date, i.total
+      FROM customers c JOIN
+           reservations r ON (r.cust_id = c.id) JOIN
+           invoices i ON (r.id = i.res_id)
+      WHERE i.invoice_date < current_date - interval '1 month'
+        AND i.paid = FALSE
+      ORDER BY i.invoice_date DESC, c.id;
 ```
+
+---
 
 #### Exercise 5
 
 - Try and understand each of the queries above in your `psql` prompt
-- Retrieve all the bookings along with customer data for bookings starting in 2020
-- Retrieve the customer names, booking start dates and number of nights for all customers who booked the hotel name `Jade Peaks Hotel`
-- Retrieve all the booking start dates with customer names and hotel names for all bookings for more than 5 nights
+- Which customers occupied room 111 and what are their details?
+- List the customer name, room details (type and rate), nights stay and departure dates for all UK customers.
+- List name, phone and email along with all reservations and invoices for customer Mary Saveley.
 
-### Other useful operations
+---
 
-Ordering the result:
+### The Vexing Question of NULL
+A column can be assigned a NULL value to indicate it has no value. This can happen when the data for this column is unknown at the time the row is created, for example, employee leaving date, order shipment date, etc... It can also be used when the data is optional.
 
-```sql
-SELECT * FROM table ORDER BY column;
-```
+Be careful with expressions - any expression that includes a NULL value results in NULL as the expression value.
 
-This will sort the returned rows in the ascending order for "column". To sort them in descending order, use:
-
-```sql
-SELECT * FROM table ORDER BY column DESC;
-```
-
-Limiting the number of results returned:
+Because NULL is 'no value' it cannot be compared to anything else. For example, you will never get any results from:
 
 ```sql
-SELECT * FROM table LIMIT 10;
+    SELECT * FROM customers WHERE postcode = NULL;
 ```
 
-Returning all customers whose ID is 1, 2, 3 or 4:
+nor will you get any from:
 
 ```sql
-SELECT * FROM customers WHERE id IN (1,2,3,4);
+    SELECT * FROM customers WHERE postcode != NULL;
 ```
 
-Query by pattern matching, for example retrieve all customers whose name starts with Bob:
+Instead you must use:
 
 ```sql
-SELECT * FROM customers WHERE name LIKE 'Bob%';
+    ... WHERE postcode IS NULL
 ```
 
-You can combine different operations together, for example, if you want to retrieve all the booking start dates with the customer names and hotel names for customer names starting with the letter `M` ordered by hotel name with a limit of 3 results:
+or
 
 ```sql
-SELECT bookings.checkin_date,customers.name,hotels.name FROM bookings
-INNER JOIN customers ON customers.id=bookings.customer_id
-INNER JOIN hotels ON hotels.id=bookings.hotel_id
-WHERE customers.name LIKE 'M%'
-ORDER BY hotels.name
-LIMIT 3;
+    ... WHERE postcode IS NOT NULL
 ```
 
-#### Exercise 6
+This behaviour has some impacts on operations like JOIN, where NULL values won't match. You could work around this, but see the warning below, by using:
 
-- Retrieve all customers whose name starts with the letter `S`
-- Retrieve all hotels which have the word `Hotel` in their name
-- Retrieve the booking start date, customer name, hotel name for the top 5 bookings ordered by number of nights in descending order
+```sql
+    ... ON (a.col = b.col OR
+            a.col IS NULL AND b.col IS NULL)
+```
+***WARNING:***
+*However, be aware that this is not a sensible situation - join columns containing NULL should be expected to not match or should be disallowed (see Primary Keys later)*
+
+You can explicitly provide NULL as a value in INSERT and UPDATE statements, for example:
+
+```sql
+    INSERT INTO rooms (room_no, rate, room_type, no_guests)
+      VALUES (213, 95.00, NULL, 2);
+
+    UPDATE rooms SET room_type = NULL, no_guests = NULL
+      WHERE room_no = 204;
+```
+
+In INSERT statements if you omit a column from the column list (following the table name) then that column will be given either:
+* an autogenerated value (if it has datatype SERIAL)
+* a default value if one has been specified in the CREATE TABLE command
+* NULL if neither of the above apply
+
+There are some functions that can operate on NULL values, especially the `coalesce(x, y)` function. This function looks at the first argument `x` and if it is NULL returns the value of the second argument `y` otherwise it returns the value of `x`. For example:
+
+```sql
+    SELECT room_no, rate, coalesce(room_type, 'None') type
+      FROM rooms
+      WHERE no_guests IS NULL;
+```
+
+Notes:
+- The coalesce function can take more than two arguments and returns the first of these (from left to right) that is not null.
+- This feature is provided by most SQL vendors but goes by different names, e.g. ifnull(x, y) in MySQL, nvl(x, y) in Oracle, etc...
+
+---
+## Exercise
+1.  Which customers have not yet provided a phone number?
+2.  Update room 304 such that it does not have a room_type.
+
+---
 
 ## Integration with NodeJS
 
@@ -226,13 +395,13 @@ _"node-postgres is a collection of node.js modules for interfacing with your Pos
 In the following, we will use _node-postgres_ to...
 
 1. Connect to a database
-2. Send SQL query to the database and get results
+2. Send SQL queries to the database and get results
 
 ### Loading data from a database with a GET endpoint
 
-Let's build a brand new NodeJS application with a single GET endpoint to load the list of hotels that you already have in the `hotels` table of the `cyf_hotels` database.
+Let's build a brand new NodeJS application with a single GET endpoint to load the list of customers that you already have in the `customers` table of the `cyf_hotels` database.
 
-First, create a new NodeJS application that we will call **cyf-hotels-api** (enter `server.js` when asking about the entry point):
+First, create a new NodeJS application that we will call **cyf-hotels-api** (enter `server.js` when asked for the entry point):
 
 ```
 mkdir cyf-hotels-api && cd cyf-hotels-api && npm init
@@ -261,17 +430,18 @@ Import pg library and create a new GET endpoint to load the list of hotels:
 ```
 const { Pool } = require('pg');
 
-const pool = new Pool({
-    user: 'postgres',
+const db = new Pool({
+    user: 'keith',        // replace with you username
     host: 'localhost',
     database: 'cyf_hotels',
     password: '',
     port: 5432
 });
 
-app.get("/hotels", function(req, res) {
-    pool.query('SELECT * FROM hotels', (error, result) => {
-        res.json(result.rows);
+app.get("/customers", function(req, res) {
+    pool.query('SELECT id, name, city, phone FROM customers',
+               (error, result) => {
+                   res.json(result.rows);
     });
 });
 ```
@@ -279,10 +449,10 @@ app.get("/hotels", function(req, res) {
 In the code above:
 
 - We first import the `Pool` class from the pg library, which is used to connect to a database
-- We create a new pool where we specify the credentials to connect to the cyf_hotels database
-- We then create a new /hotels endpoint where we use the method `query()` to send a SQL query to load all the hotels from the table `hotels` and return the results with `result.rows`. You can write any valid SQL query that you learned in the `query()` method!
+- We create a new connection (`db`) where we specify the credentials to connect to the cyf_hotels database
+- We then create a new `/customers` endpoint where we use the method `query()` to send a SQL query to load all the customers from the table `customers` and return the results with `result.rows`. You can write any valid SQL query that you learned in the `query()` method!
 
-Start your server with `node server.js` and try to reach the `/hotels` endpoint to see the list of hotels currently available in your `hotels` table of your `cyf_hotels` database. You can try to create/update/delete hotels to verify that your API always returns what is stored in your database.
+Start your server with `node server.js` and try to reach the `/customers` endpoint to see the list of customers currently available in your `cyf_hotels` database. You can try to create/update/delete customers to verify that your API always returns what is stored in your database.
 
 ## Homework
 
