@@ -289,7 +289,8 @@ Use the JOIN to define the combined row source then you can use WHERE, DISTINCT,
       ORDER BY i.invoice_date DESC, r.cust_id;
 ```
 
-There is no theoretical limit to the number of tables that can be joined in a query, although practical considerations like complexity and performance must be considered. It is quite common, though, to find up to seven or eight tables joined in a query.
+There is no theoretical limit to the number of tables that can be joined in a query, although practical considerations like
+complexity and performance must be considered. It is quite common, though, to find up to seven or eight tables joined in a query.
 
 Mult-table joins just extend the syntax to add more tables, as below:
 
@@ -302,6 +303,11 @@ Mult-table joins just extend the syntax to add more tables, as below:
         AND i.paid = FALSE
       ORDER BY i.invoice_date DESC, c.id;
 ```
+
+***Note***
+You have just learned about what is called the INNER JOIN, which is the most common kind of join.
+There are other kinds of JOIN, specifically the OUTER JOIN and the CROSS JOIN but these are less frequently used in applications.
+If you want to find out about these kinds of JOIN refer to the [PostgreSQL documentation](https://www.postgresql.org/docs/12/queries-table-expressions.html).
 
 ---
 
