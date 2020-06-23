@@ -305,7 +305,19 @@ Mult-table joins just extend the syntax to add more tables, as below:
 ```
 
 ***Note***
-You have just learned about what is called the INNER JOIN, which is the most common kind of join.
+You have just learned about what is called the INNER JOIN, which is the most common kind of join.  Indeed, you can use the keyword INNER in the JOIN syntax, as follows:
+
+```sql
+SELECT c.name, c.phone, c.email, i.invoice_date, i.total
+  FROM customers c INNER JOIN
+       reservations r ON (r.cust_id = c.id) INNER JOIN
+       invoices i ON (r.id = i.res_id)
+  WHERE i.invoice_date < current_date - interval '1 month'
+    AND i.paid = FALSE
+  ORDER BY i.invoice_date DESC, c.id;
+```
+The INNER keyword is not required (it's the default) but some organisations might require it for the sake of coding standards.
+
 There are other kinds of JOIN, specifically the OUTER JOIN and the CROSS JOIN but these are less frequently used in applications.
 If you want to find out about these kinds of JOIN refer to the [PostgreSQL documentation](https://www.postgresql.org/docs/12/queries-table-expressions.html).
 
