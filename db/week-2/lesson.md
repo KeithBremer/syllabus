@@ -27,9 +27,9 @@ Read the Mentors Notes [here](./mentors.md)
 ## Learning Objectives
 
 - Aggregate data over multiple rows and use aggregate values to restrict the results
-- Update rows in a pre-existing table using PostgreSQL using `UPDATE`
+- Update rows in a pre-existing table using `UPDATE`
 - Delete unwanted rows from an existing table using `DELETE`
-- Combine tables together in PostgreSQL using `INNER JOIN`
+- Combine tables together using `INNER JOIN`
 - Connect a PostgreSQL database to a NodeJS application
 - Retrieve data from a PostgreSQL database in a NodeJS application
 
@@ -39,13 +39,13 @@ Read the Mentors Notes [here](./mentors.md)
 
 How to calculate totals, averages, etc. over multiple rows.
 
-You frequently need to get a single piece of information that is derived from multiple rows in a table. For example, when you need to know the total i
+You frequently need to get a single piece of information that is derived from multiple rows in a table. For example, when you need to know the total of all invoices for August 2018:
 
 ```sql
-    SELECT sum(total)
-       FROM invoices
-       WHERE invoice_date BETWEEN
-             '2018-08-01' AND '2018-08-31';
+SELECT sum(total)
+   FROM invoices
+   WHERE invoice_date BETWEEN
+         '2018-08-01' AND '2018-08-31';
 ```
 
 The aggregate functions are:
@@ -62,51 +62,52 @@ Further examples:
 "What is the average length of stay at our hotel?" :
 
 ```sql
-    SELECT avg(checkout_date - checkin_date)
-       FROM reservations;
+SELECT avg(checkout_date - checkin_date)
+  FROM reservations;
 ```
 
 "What are the lowest and highest room rates we charge?" :
 
 ```sql
-    SELECT min(rate) AS lowest,
-           max(rate) AS highest
-       FROM rooms;
+SELECT min(rate) AS lowest,
+       max(rate) AS highest
+  FROM rooms;
 ```
 
 You can use the count(x) function to count non-null values:
 
 ```sql
-    SELECT count(id) AS id_ct, count(postcode) AS post_ct
-        FROM customers;
-     id_ct | post_ct
-    -------+---------
-       133 |     126
-    (1 row)
+SELECT count(id) AS id_ct, count(postcode) AS post_ct
+  FROM customers;
+
+   id_ct | post_ct
+  -------+---------
+     133 |     126
+  (1 row)
 ```
 
 Notice that these two results show different values - there are NULL values for postcode but id is mandatory for all rows.
 
-If you just want to count the number of rows, use `count(*)`:
+If you just want to count the number of rows, use `count(*)`. This often used to find how many rows match a `WHERE` clause:
 
 ```sql
-    SELECT count(*) FROM customers;
+SELECT count(*) FROM customers WHERE country = 'Belgium';
 ```
 
 ### Grouping Rows for Aggregation
 You can calculate aggregates over subsets of rows using the GROUP BY clause:
 
 ```sql
-    SELECT count(*) FROM rooms
-       GROUP BY room_type;
-     count
-    -------
-        14
-        14
-        8
-        10
-        2
-    (5 rows)
+SELECT count(*) FROM rooms
+  GROUP BY room_type;
+  count
+  -------
+      14
+      14
+       8
+      10
+       2
+  (5 rows)
 ```
 
 What do you notice?
@@ -114,16 +115,16 @@ What do you notice?
 The query calculated the counts correctly but we have no idea which room type each value represents. To solve this we are allowed to include the GROUP BY expressions in the list of selected values, as below:
 
 ```sql
-    SELECT room_type, count(*) FROM rooms
-       GROUP BY room_type;
-     room_type    | count
-    --------------+-------
-     PREMIUM      |    14
-     PREMIER      |    14
-     PREMIER PLUS |     8
-     PREMIUM PLUS |    10
-     FAMILY       |     2
-    (5 rows)
+SELECT room_type, count(*) FROM rooms
+  GROUP BY room_type;
+ room_type    | count
+--------------+-------
+ PREMIUM      |    14
+ PREMIER      |    14
+ PREMIER PLUS |     8
+ PREMIUM PLUS |    10
+ FAMILY       |     2
+(5 rows)
 ```
 
 Notice the `room_type` used for GROUP BY is also included in the SELECT list of values.
@@ -131,11 +132,11 @@ Notice the `room_type` used for GROUP BY is also included in the SELECT list of 
 We can group by multiple expressions, for example:
 
 ```sql
-    SELECT trunc(room_no/100) AS floor,
-        to_char(checkin_date, 'YYYY-MM') AS month,
-        count(*), sum(no_guests), avg(no_guests)
-    FROM reservations
-    GROUP BY floor, month;
+SELECT trunc(room_no/100) AS floor,
+       to_char(checkin_date, 'YYYY-MM') AS month,
+       count(*), sum(no_guests), avg(no_guests)
+  FROM reservations
+  GROUP BY floor, month;
 ```
 
 Notice that the GROUP BY is using the column aliases `floor` and `month` that have been defined in the select list. This works in many, but not all, SQL implementations. (In those that don't allow aliases you must use the full expression, for example: `trunc(room_no/100)` instead of `floor`)
@@ -143,12 +144,12 @@ Notice that the GROUP BY is using the column aliases `floor` and `month` that ha
 You can use a WHERE clause to restrict the rows that are included in the aggregate function. For example, if we need the above query for only the 2nd and 3rd floors:
 
 ```sql
-    SELECT trunc(room_no/100) AS floor,
-           to_char(checkin_date, 'YYYY-MM') AS month,
-           count(*), sum(no_guests), avg(no_guests)
-       FROM reservations
-       WHERE room_no BETWEEN 200 AND 399
-       GROUP BY floor, month;
+SELECT trunc(room_no/100) AS floor,
+       to_char(checkin_date, 'YYYY-MM') AS month,
+       count(*), sum(no_guests), avg(no_guests)
+  FROM reservations
+  WHERE room_no BETWEEN 200 AND 399
+  GROUP BY floor, month;
 ```
 
 Note that it is NOT usually possible to use column aliases in the where condition.
@@ -158,23 +159,23 @@ A WHERE clause is applied before any aggregation, if you need to restrict result
 In the above, to return only results with the number of reservations greater than, say, 4 we use the HAVING clause:
 
 ```sql
-    SELECT trunc(room_no/100) AS floor,
-           to_char(checkin_date, 'YYYY-MM') AS month,
-           count(*), sum(no_guests), avg(no_guests)
-       FROM reservations
-       GROUP BY floor, month
-       HAVING count(*) > 4;    --<< Note the HAVING keyword
+SELECT trunc(room_no/100) AS floor,
+       to_char(checkin_date, 'YYYY-MM') AS month,
+       count(*), sum(no_guests), avg(no_guests)
+   FROM reservations
+   GROUP BY floor, month
+   HAVING count(*) > 4;    --<< Note the HAVING keyword
 ```
 
 The order of clauses in the SELECT statement is:
 
 ```sql
-    SELECT ...
-       FROM ...
-       [WHERE ...]
-       [GROUP BY ...
-       [HAVING ...] ]
-       [ORDER BY ...]
+SELECT ...
+   FROM ...
+   [WHERE ...]
+   [GROUP BY ...
+   [HAVING ...] ]
+   [ORDER BY ...]
 ```
 
 The square brackets indicate optional clauses. Note that HAVING is only relevant when you have a GROUP BY and must follow it in the SELECT statement.
@@ -195,7 +196,7 @@ Use HAVING when the values you want to test are the results of aggregate functio
 
 ### Updating a row
 
-The general construction to update a row is:
+When you need to change values in a table, use the `UPDATE` command. The general construction to update a row is:
 
 ```sql
 UPDATE table
@@ -203,6 +204,7 @@ UPDATE table
       column2 = value2
   WHERE condition;
 ```
+Note that `UPDATE` usually requires a `WHERE` clause to specify the row or rows to be updated. As with `SELECT`, if you don't specify a condition to restrict the rows, the command applies to all the rows in the table.
 
 For example, to update the name and country of the customer with ID 3:
 
@@ -231,7 +233,7 @@ DELETE FROM table WHERE condition;
 For example, to delete the booking with ID 4:
 
 ```sql
-DELETE FROM bookings WHERE id=4;
+DELETE FROM reservations WHERE id=4;
 ```
 
 **NOTE:** If you don't supply a `WHERE` clause with `DELETE` or `UPDATE` the command will be applied to **all** the rows in the table which is rarely what you want.
@@ -239,7 +241,7 @@ DELETE FROM bookings WHERE id=4;
 #### Exercise 4
 
 - Delete the booking of customer ID `8` for the date `2020-01-03`
-- Delete all the bookings of customer Juri Yoshido (hint: subquery)
+- Delete all the bookings of customer Juri Yoshido (customer id 96)
 - Delete the customer details for Juri Yoshido
 
 ### Joining tables
@@ -257,9 +259,9 @@ The join columns are usually referred to as foreign keys and primary keys.
 To join reservations and invoices in SQL:
 
 ```sql
-    SELECT r.cust_id, r.room_no, i.invoice_date, i.total
-       FROM reservations r JOIN
-            invoices i ON (r.id = i.res_id);
+SELECT r.cust_id, r.room_no, i.invoice_date, i.total
+  FROM reservations r JOIN
+       invoices i ON (r.id = i.res_id);
 ```
 
 Notice:
@@ -271,11 +273,11 @@ Table aliases (r and i) used to qualify columns
 The new syntax follows the following pattern:
 
 ```sql
-    SELECT ...
-      FROM ... [JOIN ... ON (...)]...
-      [WHERE ...]
-      [GROUP BY ... [HAVING ...] ]
-      [ORDER BY ...]
+SELECT ...
+  FROM ... [JOIN ... ON (...)]...
+  [WHERE ...]
+  [GROUP BY ... [HAVING ...] ]
+  [ORDER BY ...]
 ```
 
 Use the JOIN to define the combined row source then you can use WHERE, DISTINCT, GROUP BY, ORDER BY, etc... as with single-table queries. For example:
@@ -295,13 +297,13 @@ complexity and performance must be considered. It is quite common, though, to fi
 Mult-table joins just extend the syntax to add more tables, as below:
 
 ```sql
-    SELECT c.name, c.phone, c.email, i.invoice_date, i.total
-      FROM customers c JOIN
-           reservations r ON (r.cust_id = c.id) JOIN
-           invoices i ON (r.id = i.res_id)
-      WHERE i.invoice_date < current_date - interval '1 month'
-        AND i.paid = FALSE
-      ORDER BY i.invoice_date DESC, c.id;
+SELECT c.name, c.phone, c.email, i.invoice_date, i.total
+  FROM customers c JOIN
+       reservations r ON (r.cust_id = c.id) JOIN
+       invoices i ON (r.id = i.res_id)
+  WHERE i.invoice_date < current_date - interval '1 month'
+    AND i.paid = FALSE
+  ORDER BY i.invoice_date DESC, c.id;
 ```
 
 ***Note***
@@ -340,32 +342,32 @@ Be careful with expressions - any expression that includes a NULL value results 
 Because NULL is 'no value' it cannot be compared to anything else. For example, you will never get any results from:
 
 ```sql
-    SELECT * FROM customers WHERE postcode = NULL;
+SELECT * FROM customers WHERE postcode = NULL;
 ```
 
 nor will you get any from:
 
 ```sql
-    SELECT * FROM customers WHERE postcode != NULL;
+SELECT * FROM customers WHERE postcode != NULL;
 ```
 
 Instead you must use:
 
 ```sql
-    ... WHERE postcode IS NULL
+  ... WHERE postcode IS NULL
 ```
 
 or
 
 ```sql
-    ... WHERE postcode IS NOT NULL
+  ... WHERE postcode IS NOT NULL
 ```
 
 This behaviour has some impacts on operations like JOIN, where NULL values won't match. You could work around this, but see the warning below, by using:
 
 ```sql
-    ... ON (a.col = b.col OR
-            a.col IS NULL AND b.col IS NULL)
+  ... ON (a.col = b.col OR
+          a.col IS NULL AND b.col IS NULL)
 ```
 ***WARNING:***
 *However, be aware that this is not a sensible situation - join columns containing NULL should be expected to not match or should be disallowed (see Primary Keys later)*
@@ -388,9 +390,9 @@ In INSERT statements if you omit a column from the column list (following the ta
 There are some functions that can operate on NULL values, especially the `coalesce(x, y)` function. This function looks at the first argument `x` and if it is NULL returns the value of the second argument `y` otherwise it returns the value of `x`. For example:
 
 ```sql
-    SELECT room_no, rate, coalesce(room_type, 'None') type
-      FROM rooms
-      WHERE no_guests IS NULL;
+SELECT room_no, rate, coalesce(room_type, 'None') type
+  FROM rooms
+  WHERE no_guests IS NULL;
 ```
 
 Notes:
@@ -443,7 +445,7 @@ app.listen(3000, function() {
 });
 ```
 
-Import pg library and create a new GET endpoint to load the list of hotels:
+Import pg library and create a new GET endpoint to load the list of customers:
 
 ```
 const { Pool } = require('pg');
@@ -457,7 +459,7 @@ const db = new Pool({
 });
 
 app.get("/customers", function(req, res) {
-    pool.query('SELECT id, name, city, phone FROM customers',
+    db.query('SELECT id, name, city, phone FROM customers',
                (error, result) => {
                    res.json(result.rows);
     });
@@ -467,14 +469,16 @@ app.get("/customers", function(req, res) {
 In the code above:
 
 - We first import the `Pool` class from the pg library, which is used to connect to a database
-- We create a new connection (`db`) where we specify the credentials to connect to the cyf_hotels database
+- We create a new connection (`db`) where we specify the credentials to connect to the cyf_hotel database
 - We then create a new `/customers` endpoint where we use the method `query()` to send a SQL query to load all the customers from the table `customers` and return the results with `result.rows`. You can write any valid SQL query that you learned in the `query()` method!
 
-Start your server with `node server.js` and try to reach the `/customers` endpoint to see the list of customers currently available in your `cyf_hotels` database. You can try to create/update/delete customers to verify that your API always returns what is stored in your database.
+***Note:*** There is no semicolon to end the SQL statement.
+
+Start your server with `node server.js` and try to reach the `/customers` endpoint to see the list of customers currently available in your `cyf_hotels` database. You can try to create/update/delete customers using psql to verify that your API always returns what is stored in your database.
 
 ## Homework
 
-All of the homework can be found in [this repository](https://github.com/CodeYourFuture/Databases-Homework).
+All of the homework can be found in [this repository](https://github.com/KeithBremer/Databases-Homework).
 
 ### Submission
 
@@ -484,4 +488,4 @@ When you have completed the homework create a pull request back to the `CodeYour
 
 ### Tasks
 
-You should complete all of the tasks in **Week 2** of the [Database Homework repository](https://github.com/CodeYourFuture/Databases-Homework).
+You should complete all of the tasks in **Week 2** of the [Database Homework repository](https://github.com/KeithBremer/Databases-Homework).

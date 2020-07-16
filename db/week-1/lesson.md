@@ -39,6 +39,7 @@ By the end of this lesson students should be able to
 - Retrieve data from a table using PostgreSQL
 - Use expressions to manipulate the results of queries
 - Retrieve data from a table using conditionals in PostgreSQL
+- Insert new data into existing tables
 
 ---
 
@@ -48,7 +49,7 @@ A database is a structured set of data held in a computer. It provides ways to s
 
 ### Why do we need them?
 
-In the past few weeks, you stored and retrieved data using files. This is fine for simple data but it can quickly become an issue as your application becomes more complex and needs to store and manipulate more complicated data. For example, imagine you want to develop the next biggest hotel booking application. You will need to store the list of hotels available for booking somewhere, and as you add more features, you will need to save users information, the reviews they post for each hotel, but also the bookings each user makes. You can see that the data you need to handle can become very complicated, especially when you need to consider that data are not static, as they can be updated or deleted. To work more effectively with data, we can then use a database, which present the following benefits:
+In the past few weeks, you stored and retrieved data using files. This is fine for simple data but it can quickly become an issue as your application becomes more complex and needs to store and manipulate more complicated data. For example, imagine you want to develop the next biggest hotel booking application. You will need to store the list of hotels available for booking somewhere, and as you add more features, you will need to save users information, the reviews they post for each hotel, but also the bookings each user makes. You can see that the data you need to handle can become very complicated, especially when you need to consider that data are not static, as they can be updated or deleted. To work more effectively with data, we can then use a database, which presents the following benefits:
 
 - A database defines a structure for your data and the relationships between entities
 - A database provides convenient and performant ways to safely store and retrieve data
@@ -70,11 +71,11 @@ _"PostgreSQL is a powerful, open source object-relational database system that u
 - SQL statements are used to query, create, update, delete records in a database
 - SQL statements are executed by a RDBMS.
 
-### What is a RDBMS?
+### What is an RDBMS?
 
 - Stands for Relational Database Management System
 - It is a program that processes SQL statements to manage a relational database
-- PostgreSQL is a RDBMS.
+- PostgreSQL is an RDBMS.
 
 ### What characterizes a relational database?
 
@@ -87,31 +88,55 @@ As mentioned previously, a relational database is a specific type of database. D
 
 ### Check your PostgreSQL installation
 
-Open a terminal in your laptop and verify the command `psql -V` returns the version of PostgreSQL. In psql, you can use the command `help` to show the help menu. Within the command prompt, you can enter SQL statements and run them against PostgreSQL. To quit psql, enter the command `\q`.
+Open a terminal in your laptop and verify the command `psql --version` returns the version of PostgreSQL.
 
-## Communicating with the database using SQL
+To start using PostgreSQL you first need authorisation using a username and password. You can create these using a shell command from the terminal:
+```
+  $ sudo -u postgres createuser -p --createdb <name>
+```
+This will ask for your login password to run the sudo command. The other parts of the line are:
 
-All commands in the following need to be entered at the `psql` command prompt. However, sometimes it's easier to write the code in a file and then load the file with psql. For example, if you write your SQL code in a file called `test.sql`, you can then execute it with `psql -d DATABASE_NAME -f test.sql`.
+    -u postgres       tells sudo to run createuser as user postgres (set up when  you installed postgres)
+
+    createuser        the shell command to create a PostgeSQL user
+
+    -P                (upper case) tells createuser to ask for the new user's password
+
+    <name>            the new username (hint: make it the same as your o/s username)
+
+Remember the new username and password details - you will need them later.
 
 ### Creating a new database
 
 In a terminal, create a new database named `cyf_hotels` with the following command:
 
-```sql
-    createdb cyf_hotels
+```
+createdb cyf_hotels
 ```
 
 Then connect to your database with:
 
-```sql
-    psql cyf_hotels
+```
+psql cyf_hotels
 ```
 
-Download the following files to a directory on your computer. To do this, click the file to open it in a github formatted page, then right click the Raw button in the bar just above the code and select Save As (or Save Link As or similar) to save it:
+## Communicating with the database using SQL
+
+We use SQL to perform actions on the database and initially we can use a terminal-like utility to do this.  The utility is named `psql` and is run using the command:
+```
+psql <dbname> <username>
+```
+The command prompt from psql is the database name currently connected:
+```
+cyf_hotel=>
+```
+In psql, you can use the command `help` to show the help menu. Within the command prompt, you can enter SQL statements and run them against PostgreSQL. To quit psql, enter the command `\q`.
+
+Download the following file to a directory on your computer. This file creates the sample data you can use for the following sections. To do this, click the file to open it in a github formatted page, then right click the Raw button in the bar just above the code and select Save As (or Save Link As or similar) to save it:
 
 - [`build-hotel.sql`](./sql/build-hotel.sql)
 
-Once you have the file downloaded to a known directory, execute the file `build-hotel.sql` from `psql`. This will create the sample data you can use for the following sections as shown below (replace `/your/sql/path/` with the path to the download directory used above).
+Once you have the file downloaded to a known directory, execute the file `build-hotel.sql` from `psql` as shown below (replace `/your/sql/path/` with the path to the download directory used above):
 
 ```SQL
 \include /your/sql/path/build-hotel.sql
@@ -120,7 +145,7 @@ Once you have the file downloaded to a known directory, execute the file `build-
 Check that you have built all the required tables:
 
 ```sql
-    \dt
+\dt
 ```
 You should see a listing of your tables as follows (with your own username as owner):
 ```
@@ -139,30 +164,30 @@ You should see a listing of your tables as follows (with your own username as ow
 We are first going to look at retrieving data from the database so we can examine it and later, use it in our applications.
 
 To get data out of a table you use the SELECT statement (or command):
-
-    SELECT ... FROM ...;
-
-For example:
-
-        SELECT name, phone, country FROM customers;
-
-SQL commands entered in the psql command line tool are terminated with a semicolon (;). The SQL command can extend across several lines, but each keyword, name or value must be on just one line. For example:
-
+```sql
+SELECT ... FROM ...;
 ```
-    SELECT name,
-           phone,
-           country
-      FROM
-           customers;
+For example:
+```sql
+SELECT name, phone, country FROM customers;
+```
+SQL commands entered in the psql command line tool are terminated with a semicolon (;). The SQL command can extend across several lines, but each keyword, name or value cannot be split over more than one line. For example:
+
+```sql
+SELECT name,
+       phone,
+       country
+  FROM
+       customers;
 ```
 is the same as the previous example.
 
 You can use `SELECT * FROM ...` to return all the columns of the table. For example:
 
+```sql
+SELECT * FROM rooms;
 ```
-    SELECT * FROM rooms;
-```
-This is useful for development and testing when you may not be sure of all the column names. In general, don't use this syntax in production applications without having a very good reason.
+This is also a useful command to see what columns exist in a table. You can also use the `\d <table_name>` psql command to describe the table.
 
 Note that the use of UPPER/lower case is only to emphasise and differentiate the SQL keywords (upper case) from the other names (lower case) e.g. column and table names. SQL keywords are not case-sensitive.
 
@@ -207,28 +232,28 @@ Note that `psql` commands ARE case sensitive, unlike SQL commands.
 ---
 ## Displaying More Than Just Columns
 You can use expressions in SQL:
-
-    SELECT room_no, rate * 0.85 FROM rooms;
-    +---------+-------------+
-    | room_no | rate * 0.85 |
-    +---------+-------------+
-    |     101 |     72.2500 |
-    |     102 |     72.2500 |
-    |     103 |     72.2500 |
-    ...
-
+```sql
+SELECT room_no, rate * 0.85 FROM rooms;
++---------+-------------+
+| room_no | rate * 0.85 |
++---------+-------------+
+|     101 |     72.2500 |
+|     102 |     72.2500 |
+|     103 |     72.2500 |
+  ...
+```
 Use a **column alias** to give the expression a meaningful name:
-
-    SELECT room_no,
-           rate * 0.85 AS discounted_rate
-        FROM rooms;
-    +---------+-----------------+
-    | room_no | discounted_rate |
-    +---------+-----------------+
-    |     101 |         72.2500 |
-    |     102 |         72.2500 |
-    |     103 |         72.2500 |
-
+```sql
+SELECT room_no,
+       rate * 0.85 AS discounted_rate
+    FROM rooms;
++---------+-----------------+
+| room_no | discounted_rate |
++---------+-----------------+
+|     101 |         72.2500 |
+|     102 |         72.2500 |
+|     103 |         72.2500 |
+```
 Here, the query uses the alias as the column heading. Aliases can also be used in other contexts - more on this later...
 
 ---
@@ -254,39 +279,42 @@ String:
     ||  Concatenation
 
 For example, to display the weekly rate for a room (with 10% weekly discount):
-```
-    SELECT room_no, room_type, rate * 7 * 0.90 from rooms;
+```sql
+SELECT room_no, room_type, rate * 7 * 0.90 from rooms;
 ```
 You can change the column heading using a **column alias**:
-```
+```sql
 SELECT room_no, room_type, rate * 7 * 0.90 as weekly_rate from rooms;
 ```
-
+Use string concatenation to glue character data together:
+```sql
+SELECT 'Customer name = ' || name FROM customers;
+```
 ---
 ## Choosing the Rows
 You can choose which rows to display by specifying some condition that must be matched:
+```sql
+SELECT id, name, phone, email, country
+  FROM customers
+  WHERE country = 'France';
 
-    SELECT id, name, phone, email, country
-      FROM customers
-      WHERE country = 'France';
-
-     id  |        name        |      phone       |            email            | country
-    -----+--------------------+------------------+-----------------------------+---------
-     9   | Laurence Lebihan   | 91.24.4555       | laurence.lebihan@xmzx.net   | France
-     12  | Carine Schmitt     | 40.32.2555       | carine.schmitt@dftu.net     | France
-     15  | Janine Labrune     | 40.67.8555       | janine.labrune@dlsh.net     | France
-     25  | Mary Saveley       | 78.32.5555       | mary.saveley@yppl.net       | France
-     34  | Martine Rancé      | 20.16.1555       | martine.rancé@xeqs.net      | France
-     35  | Marie Bertrand     | (1) 42.34.2555   | marie.bertrand@glut.net     | France
-     49  | Frédérique Citeaux | 88.60.1555       | frédérique.citeaux@vekn.net | France
-     59  | Annette Roulet     | 61.77.6555       | annette.roulet@lgha.net     | France
-     62  | Daniel Da Silva    | +33 1 46 62 7555 | daniel.da.silva@hijy.net    | France
-     63  | Daniel Tonini      | 30.59.8555       | daniel.tonini@mxvw.net      | France
-     91  | Laurence Lebihan   | 91.24.4555       | laurence.lebihan@xmzx.net   | France
-     92  | Paul Henriot       | 26.47.1555       | paul.henriot@uwua.net       | France
-     106 | Dominique Perrier  | (1) 47.55.6555   | dominique.perrier@bdim.net  | France
-    (13 rows)
-
+ id  |        name        |      phone       |            email            | country
+-----+--------------------+------------------+-----------------------------+---------
+ 9   | Laurence Lebihan   | 91.24.4555       | laurence.lebihan@xmzx.net   | France
+ 12  | Carine Schmitt     | 40.32.2555       | carine.schmitt@dftu.net     | France
+ 15  | Janine Labrune     | 40.67.8555       | janine.labrune@dlsh.net     | France
+ 25  | Mary Saveley       | 78.32.5555       | mary.saveley@yppl.net       | France
+ 34  | Martine Rancé      | 20.16.1555       | martine.rancé@xeqs.net      | France
+ 35  | Marie Bertrand     | (1) 42.34.2555   | marie.bertrand@glut.net     | France
+ 49  | Frédérique Citeaux | 88.60.1555       | frédérique.citeaux@vekn.net | France
+ 59  | Annette Roulet     | 61.77.6555       | annette.roulet@lgha.net     | France
+ 62  | Daniel Da Silva    | +33 1 46 62 7555 | daniel.da.silva@hijy.net    | France
+ 63  | Daniel Tonini      | 30.59.8555       | daniel.tonini@mxvw.net      | France
+ 91  | Laurence Lebihan   | 91.24.4555       | laurence.lebihan@xmzx.net   | France
+ 92  | Paul Henriot       | 26.47.1555       | paul.henriot@uwua.net       | France
+ 106 | Dominique Perrier  | (1) 47.55.6555   | dominique.perrier@bdim.net  | France
+(13 rows)
+```
 You can use comparison operators =, <, >, <=, >=, != (or <>)
 
 Note: use only one = (equals) symbol to test for equality
@@ -299,59 +327,59 @@ Only the rows that match the comparison test (called a predicate) are returned b
 
 ### Combining Tests in a Predicate
 Use AND and OR to combine tests:
-
-    SELECT * FROM reservations
-       WHERE room_no >= 200
-         AND room_no < 300
-         AND checkin_date >= '2018-01-01';
-
+```sql
+SELECT * FROM reservations
+   WHERE room_no >= 200
+     AND room_no < 300
+     AND checkin_date >= '2018-01-01';
+```
 This lists reservations for rooms on the second floor (rooms 200 - 299) since the start of 2018. Note the format of the date value - this conforms to the ISO 8601 standard and should be used in preference to any other format to avoid ambiguity.
 
 Another example - to find cheap or Premier rooms on floors 1 and 2 - we might try this to start with:
-
-    SELECT * FROM rooms
-       WHERE room_type = 'PREMIER'
-          OR rate < 100.00
-         AND room_no < 300;
-
+```sql
+SELECT * FROM rooms
+   WHERE room_type = 'PREMIER'
+      OR rate < 100.00
+     AND room_no < 300;
+```
 This isn't quite right - it returns rooms on the 3rd and 4th floors. Why?
 
 ### Overriding Evaluation Order
 Just like any programming language, SQL has an evaluation order (precedence). For example, multiply and divide take precedence over add and subtract, so that:
-
-    SELECT rate + 20 * 0.85 ...
-
+```sql
+SELECT rate + 20 * 0.85 from rooms;
+```
 is not the same as:
-
-    SELECT (rate + 20) * 0.85 ...
-
+```sql
+SELECT (rate + 20) * 0.85 from rooms;
+```
 We can override the normal precedence by using parentheses `(...)` around parts of the expression, just as in JavaScript.
 
 With compound predicates AND takes precedence over OR, so that to make the query give the intended results we need to use:
-
-    SELECT * FROM rooms
-       WHERE (room_type = 'PREMIER'
-          OR rate < 100.00)
-         AND room_no < 300;
-
+```sql
+SELECT * FROM rooms
+   WHERE (room_type = 'PREMIER'
+      OR rate < 100.00)
+     AND room_no < 300;
+```
 ---
 ## More Predicate Types
 The BETWEEN operator has the form `a BETWEEN b AND c` : checks that a is in the range b - c inclusive. For example:
-
-    SELECT ... WHERE price BETWEEN 100 AND 250 ...
-
+```sql
+SELECT ... WHERE price BETWEEN 100 AND 250 ...
+```
 Note that the AND in this case is not combining multiple predicates, it's part of the BETWEEN operator.
 
 The IN operator, `a IN (b, c, d, ...)` checks if the value of a is equal to any of b, c, d, etc... For example:
-
-    SELECT ... WHERE room_no IN (201, 202, 204, 206) ...
-
+```sql
+SELECT ... WHERE room_no IN (201, 202, 204, 206) ...
+```
 Both the BETWEEN and the IN operators can be inverted using:
+```sql
+  ... a NOT BETWEEN b AND c ...
 
-    ... a NOT BETWEEN b AND c ...
-
-    a NOT IN (b, c, d, ...)
-
+  ... a NOT IN (b, c, d, ...)
+```
 The LIKE operator tests for a match against a wildcard string as `a LIKE b` where a is being tested and b is the wildcard string. The wildcard string contains text to be matched along with wildcard symbols '%' and '_'.
 * `%` (percent)     matches any number of any characters
 * `_` (underscore)  matches exactly one of any character
@@ -372,7 +400,7 @@ If you need to match for a string that includes one of the wildard characters yo
 
 LIKE is case sensitive in many SQL implementations so to make a case insensitive match you should either convert the tested value to either all upper or all lower case, for example:
 
-`lower(name) LIKE '%b%'`    matches any name that contains the letter B or b
+`lower(name) LIKE '%b%'`    matches any name that contains the letters B or b
 
 Note: PostgreSQL also has the non-standard operator ILIKE that can perform a case-insensitive comparison - but avoid this to make code more portable.
 
@@ -389,26 +417,26 @@ Note: PostgreSQL also has the non-standard operator ILIKE that can perform a cas
 You can use the built-in functions of SQL just as you can in JavaScript, but note that they are different (this is true of most programming languages) but there are also differences between SQL implementations.
 
 You use functions to change values, usually of columns, wherever you can use a column, for example, in the selected list of values:
-
-    SELECT name, length(name) AS namelen, upper(email)
-      FROM customers;
-
+```sql
+SELECT name, length(name) AS namelen, upper(email)
+  FROM customers;
+```
 This query also uses a column alias (namelen) to provide a meaningful column heading.
 
 Functions are available that operate on all different datatypes.
 
 Country names are mixed case so to make sure we always match regardless of the stored case we can use the `lower` function to find all customers from Manchester, UK:
-
-    SELECT * FROM customers
-       WHERE lower(country) = 'uk'
-         AND city = 'Manchester';
-
+```sql
+SELECT * FROM customers
+   WHERE lower(country) = 'uk'
+     AND city = 'Manchester';
+```
 Assuming room rates include VAT at 20%, list room rates after VAT increases to 23.5% (from 20%), but round to the nearest pound:
-
-    SELECT room_no, room_type, rate AS old_rate,
-           round(rate * 100/120 * 123.5/100) AS new_rate
-       FROM rooms;
-
+```sql
+SELECT room_no, room_type, rate AS old_rate,
+       round(rate * 100/120 * 123.5/100) AS new_rate
+   FROM rooms;
+```
 *For further information on SQL functions see the official PostgreSQL documentation at https://www.postgresql.org/docs/12/functions.html (for version 12 - for other versions change 12 to the required version)*
 
 ---
@@ -419,12 +447,12 @@ In SQL dates and times are held in an internal format but are represented extern
 *   Date/Time format:   'YYYY-MM-DD HH:mm:SS.ddd'   e.g. '2018-07-21 15:26:04'
 
 You can perform arithmetic on dates and times, for example:
-
-    SELECT cust_id, room_no, checkin_date,
-           checkout_date - checkin_date AS nights
-       FROM reservations
-       WHERE checkout_date = current_date + 1;
-
+```sql
+SELECT cust_id, room_no, checkin_date,
+       checkout_date - checkin_date AS nights
+   FROM reservations
+   WHERE checkout_date = current_date + 1;
+```
 This query performs subtraction of one date from another (`checkout_date - checkin_date`) to calculate the number of nights the customer has stayed. It also performs addition (`current_date + 1`) to get tomorrow's date so that it lists all reservations that will be checking out tomorrow.
 
 Note: `current_date` is a postgres function that returns the current date.
@@ -442,33 +470,33 @@ You can also represent time intervals but the representations can be complicated
 ---
 ## Eliminating Duplicates
 "Which nationalities visit our hotel?":
-
-    SELECT country FROM customers;
-
+```sql
+SELECT country FROM customers;
+```
 But how many values do you see returned for each country? If two customers come from a particular country that country will appear twice in the output. If more than two come from the same country then... But we only need to know the different countries.
 
 To see each country only once, use the keyword DISTINCT, as follows:
-
-    SELECT DISTINCT country FROM customers;
-
+```sql
+SELECT DISTINCT country FROM customers;
+```
 The keyword DISTINCT must appear immediately after the keyword SELECT. If more than one column is selected then DISTINCT applies to the combined values of those columns.
 
 ---
 ## Ordering the Returned Rows
 If you want to see the data in a specific order, e.g. "List all customers alphabetically by name within each country":
-
-    SELECT id, name, phone, email, country
-        FROM customers
-        ORDER BY country, name;
-
+```sql
+SELECT id, name, phone, email, country
+    FROM customers
+    ORDER BY country, name;
+```
 You can can add ASC (ascending, the default) or DESC (descending) after each column name in the ORDER BY clause to control the direction of sorting.
 
 For example:
-
-    SELECT id, name, country, city
-        FROM customers
-        ORDER BY country DESC, city;
-
+```sql
+SELECT id, name, country, city
+    FROM customers
+    ORDER BY country DESC, city;
+```
 This will sort the data into descending alphabetic order of country then ascending order of city name within each country. The output will look something like this:
 ```
  id  |          name           |   country    |       city        
@@ -501,12 +529,12 @@ Note: you can order by columns that are not returned by the query.
 
 ### Limiting the Number of Rows
 You can reduce the number of rows returned by using the LIMIT clause at the end of the query:
-
-    SELECT id, name, phone, email, country
-      FROM customers
-      ORDER BY country, name
-      LIMIT 20;
-
+```sql
+SELECT id, name, phone, email, country
+  FROM customers
+  ORDER BY country, name
+  LIMIT 20;
+```
 The LIMIT clause is not normally used without the ORDER BY clause - without the ORDER BY clause rows can be returned in any arbitrary sequence.
 
 Not all SQL implementations of SQL support LIMIT, some use TOP while Oracle uses ROWNUM.
@@ -524,7 +552,7 @@ Not all SQL implementations of SQL support LIMIT, some use TOP while Oracle uses
 ### Inserting data
 
 To add new data to a table use the INSERT command that has the following format:
-```
+```sql
 INSERT INTO table_name (column_name, ...)
        VALUES (value, ...)
 ```
@@ -534,19 +562,27 @@ INSERT INTO customers (name, email, address, city, postcode, country)
   VALUES ('John Smith','j.smith@johnsmith.org',
           '11 New Road','Liverpool','L10 2AB','UK');
 ```
+Note that the order of values in the `VALUES (...)` clause must correspond to the columns in the column name list. The first value is stored in the first named column, the second value in the second named column and so forth.
 
 #### Exercise 6
 
 - Insert yourself in the `customers` table. Query the table to check your new data.
 - Insert a new room type of PENTHOUSE with a default rate of 185.00.
 - Add two new rooms, 501 and 502, of type PENTHOUSE and set the rate to the same as the default for that room type.
-- Try to insert a reservation for a customer id which does not exist in the `customers` table (for example ID `1000`). What is happening and why?
+- Try to insert a reservation for a customer id that does not exist in the `customers` table (for example ID `1000`). What is happening and why?
+
+---
+## Summary
+
+In this lesson you have learned the use of databases and how relational databases are structured. You've also learned how to use basic single-table query commands in SQL and some of the special 'backslash' commands in `psql`. You have used the SELECT command to control the columns and values that are returned, the DISTINCT, ORDER BY and LIMIT clauses to control the order and numbers of rows returned and you've used the WHERE clause to choose the rows that you access. You have learned the INSERT command to add new data to the database
+
+Next week we shall go on to more complex query constructs including joins, updates and deletes along with incorporating SQL into a node.js server.
 
 ## Homework
 
 First complete all the exercises for this lesson if you haven't managed to finish them all.
 
-All of the homework can be found in [this repository](https://github.com/CodeYourFuture/Databases-Homework).
+All of the homework can be found in [this repository](https://github.com/KeithBremer/Databases-Homework).
 
 ### Submission
 
@@ -558,4 +594,4 @@ When you have completed the homework create a pull request back to the `CodeYour
 
 ### Tasks
 
-You should complete all of the tasks in **Week 1** of the [Database Homework repository](https://github.com/CodeYourFuture/Databases-Homework).
+You should complete all of the tasks in **Week 1** of the [Database Homework repository](https://github.com/KeitBremer/Databases-Homework).
